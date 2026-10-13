@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<!-- ⚠ 私用版（site-local）：內含版權教材原文題，只供你本人自用。
+     請勿上載到公開主機、請勿分享連結或檔案。公開版請部署 tools/build-site.js 產生的 site/。 -->
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>M2 無限答題練習 · HKDSE 數學延伸單元二</title>
+<meta name="description" content="HKDSE M2 練習 App：14 個主題、500 題以上題庫（含公開原創模擬試卷），分 LV1／LV2／LV3 三級難度，中英雙語可切換，連續答對 10 題闖關，答錯即時顯示 DSE 評分標準的逐步解題，支援各種模糊寫法，離線可用。">
+<meta name="theme-color" content="#0d131b">
+<meta name="color-scheme" content="dark">
+<meta name="robots" content="noindex, nofollow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="M2 無限答題練習 · HKDSE 數學延伸單元二">
+<meta property="og:description" content="14 個主題、500 題以上 M2 練習，LV1／LV2／LV3 分級，中英雙語，自動批改、逐步解題，內含原創模擬試卷。">
+<meta property="og:locale" content="zh_HK">
+<meta property="og:locale:alternate" content="en_HK">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="M2 練習">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-flame">🔥</span>
+    <div>
+      <h1 data-i18n="appTitle">M2 無限答題練習</h1>
+      <p class="sub" id="appSubtitle" data-i18n="appSubtitle">HKDSE 數學延伸單元二 · 分級練習 · 連續答對 10 題闖關</p>
+    </div>
+  </div>
+  <div class="head-right">
+    <div class="lang-switch" role="group" data-i18n-title="langTitle" title="切換語言 / Switch language">
+      <button type="button" id="btnLangZh" class="lang-btn active" lang="zh-Hant">中文</button>
+      <button type="button" id="btnLangEn" class="lang-btn" lang="en">English</button>
+    </div>
+    <div class="headstats">
+      <div class="stat"><span class="k" data-i18n="statCorrect">總答對</span><span class="v" id="statTotal">0</span></div>
+      <div class="stat"><span class="k" data-i18n="statWrong">本局失手</span><span class="v" id="statWrong">0</span></div>
+      <div class="stat"><span class="k" data-i18n="statMode">狀態</span><span class="v badge" id="statMode">闖關中</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ══ 私用版標示：只在載入了 bank-local（教材原文題）的私用版顯示，公開版由 app.js 保持隱藏 ══ -->
+<div class="local-badge" id="localBadge" data-i18n="localBadge" hidden>私用版：含教材原文題，請勿公開分享</div>
+
+<main>
+  <!-- ══ 模式切換（v5）：練習模式（現有全部功能）／模擬試卷模式 ══
+       切換只改 hidden，現有練習模式的狀態與 DOM 一律保留，不會被破壞。 -->
+  <div class="mode-switch" id="modeSwitch" role="group" data-i18n-title="modeSwitchLabel" title="模式">
+    <span class="mode-switch-label" data-i18n="modeSwitchLabel">模式</span>
+    <button type="button" id="btnModePractice" class="mode-btn active" data-i18n="modePractice" data-i18n-title="modePracticeTitle">📚 練習模式</button>
+    <button type="button" id="btnModePaper" class="mode-btn" data-i18n="modePaper" data-i18n-title="modePaperTitle">📝 模擬試卷</button>
+  </div>
+
+  <!-- ══ 練習模式（原有畫面，全部包在 #practiceMode 內，方便整塊隱藏／顯示） ══ -->
+  <div id="practiceMode" class="mode-view">
+  <!-- ══ 主題切換列：學生可隨時自行轉主題（按鈕由 app.js 依「已有題目」的主題生成） ══ -->
+  <section class="panel topic-panel">
+    <div class="panel-head">
+      <h2><span data-i18n="sec1Title">① 選擇主題</span><span class="tip" data-i18n="sec1Tip">（隨時可按，切換主題不會中斷連續紀錄）</span></h2>
+      <button id="btnRandomTopic" class="ghost-btn" data-i18n="btnRandomTopic">🎲 隨機主題</button>
+    </div>
+    <div class="topic-grid" id="topicGrid"><!-- 由 app.js 生成主題按鈕 --></div>
+
+    <!-- ══ 難度等級：全部／LV1／LV2／LV3 ══ -->
+    <div class="level-wrap">
+      <span class="level-label" data-i18n="levelLabel">難度</span>
+      <div class="level-row" id="levelRow" role="group"><!-- 由 app.js 生成 4 個等級按鈕 --></div>
+      <span class="level-tip" data-i18n="levelTip">LV1 基礎 · LV2 標準 · LV3 進階（可只練某一級）</span>
+    </div>
+  </section>
+
+  <!-- ══ AI 出題（v6，選用）：用自己的 API Key 生成新題，混入目前的連續答對訓練 ══ -->
+  <section class="panel ai-panel" id="aiPanel">
+    <div class="panel-head">
+      <h2>
+        <span data-i18n="aiSecTitle">AI 出題</span>
+        <span class="tip" data-i18n="aiSecTip">（選用：用你自己的 AI 服務生成新題，與題庫題目混合練習）</span>
+      </h2>
+      <button id="btnAiSettings" class="ghost-btn" type="button" data-i18n="aiSettingsBtn">⚙️ AI 設定</button>
+    </div>
+    <div class="ai-row">
+      <button id="btnAiToggle" class="ai-toggle" type="button" aria-pressed="false">
+        <span class="ai-knob" aria-hidden="true"></span>
+        <span id="aiToggleText" data-i18n="aiOff">AI 出題：關</span>
+      </button>
+      <span class="ai-status" id="aiStatus" hidden></span>
+    </div>
+  </section>
+
+  <!-- ══ 火焰進度 ══ -->
+  <section class="panel progress-panel">
+    <div class="panel-head">
+      <h2 data-i18n="sec2Title">② 連續答對進度</h2>
+      <span class="streak-text" id="streakText">🔥 目前連續答對：0/10 題</span>
+    </div>
+    <div class="flames" id="flames"><!-- 10 個火 --></div>
+    <p class="status-line" id="statusLine">加油！連續答對 10 題即可啟動「無限訓練模式」。</p>
+  </section>
+
+  <!-- ══ 題目卡 ══ -->
+  <section class="panel question-panel">
+    <div class="panel-head">
+      <h2 data-i18n="sec3Title">③ 題目</h2>
+      <span class="topic-tag" id="topicTag">—</span>
+    </div>
+
+    <div class="qmeta">
+      <!-- 難度標記：出題時顯示 LV1／LV2／LV3 -->
+      <span class="lv-badge lv1" id="qLevel" hidden>LV1</span>
+      <span class="sub-tag" id="qSub"><!-- 本題所屬小主題 --></span>
+      <!-- AI 出題標記：只在題目來自 AI 時顯示（含題型） -->
+      <span class="ai-badge" id="qAiBadge" hidden>🤖 AI 出題</span>
+    </div>
+    <div class="question" id="questionText">載入中…</div>
+    <!-- AI 圖形題：由 ai.js 畫成 SVG 後插入（題庫題目不會用到） -->
+    <div class="q-figure-box" id="questionFigure" hidden></div>
+
+    <div class="answer-area" id="answerArea">
+      <label for="answerInput" class="small-label" id="answerLabel" data-i18n="answerLabel">輸入你的答案（可接受 開方2、√2、2^(1/2)、3/4、0.75 等寫法）</label>
+      <div class="input-row" id="answerInputRow">
+        <input id="answerInput" type="text" autocomplete="off" spellcheck="false"
+               data-i18n-ph="answerPlaceholder" placeholder="例：√57  或  2x³ − 2x² + 3x + C">
+        <button id="btnSubmit" class="primary-btn" data-i18n="btnSubmit">提交答案</button>
+      </div>
+      <div class="hint-row">
+        <button id="btnShowHint" class="ghost-btn small" data-i18n="btnHint">💡 提示</button>
+        <div class="hint-box" id="hintBox" hidden></div>
+      </div>
+
+      <!-- ══ 溫習題（證明／論述題）：隱藏輸入框，改為「看解答」按鈕 ══ -->
+      <div class="review-box" id="reviewBox" hidden>
+        <p class="review-notice" id="reviewNotice" data-i18n="reviewNotice">本題是證明／論述題：請先在紙上作答，再按下面按鈕對照標準解答。</p>
+        <button id="btnReveal" class="primary-btn" type="button" data-i18n="btnReveal">看解答</button>
+      </div>
+    </div>
+
+    <div class="feedback" id="feedback" hidden></div>
+
+    <div class="solution" id="solution" hidden>
+      <h3 id="solTitle" data-i18n="solTitle">📘 答案與解題（DSE 評分標準）</h3>
+      <div class="std-answer"><span data-i18n="standardAnswer">標準答案：</span><span id="stdAnswer"></span></div>
+      <div id="solutionBody"></div>
+    </div>
+
+    <div class="next-row">
+      <button id="btnNext" class="primary-btn" data-i18n="btnNext" hidden>下一題 →</button>
+    </div>
+  </section>
+
+  <section class="panel footer-panel">
+    <button id="btnReset" class="ghost-btn" data-i18n="btnReset">↺ 重新開始（火歸零）</button>
+    <span class="note" data-i18n="footerNotation">
+      數學輸出全部採用 Unicode 書寫格式（∫ x² dx、√2、3/4），不出現任何原始程式碼符號。
+    </span>
+    <span class="note" id="footerPrivacy" data-i18n="footerPrivacy">
+      本練習為個人自製的學習工具，與任何出版社及考試機構無關，題目並非教材原文；所有作答紀錄只存在你的瀏覽器內，不會上傳或收集任何個人資料。
+    </span>
+    <span class="note"><a href="privacy.html" style="color:var(--flame)" data-i18n="footerPrivacyLink">私隱政策 · Privacy Policy</a></span>
+  </section>
+  </div><!-- /#practiceMode -->
+
+  <!-- ══ 模擬試卷模式（v5）：① 選卷 → ② 計時作答 → ③ 交卷報告 ══
+       三塊都用 hidden 控制，作答流程與練習模式完全獨立，
+       不碰練習模式的 streak／totalCorrect／wrongCount 與任何 DOM。 -->
+  <div id="paperMode" class="mode-view" hidden>
+
+    <!-- ① 選卷 -->
+    <section class="panel paper-list-panel" id="paperListPanel">
+      <div class="panel-head">
+        <h2><span data-i18n="paperSecTitle">選擇試卷</span><span class="tip" data-i18n="paperSecTip">（跟考試一樣計時；只作個人練習，不影響練習模式的連續紀錄）</span></h2>
+      </div>
+      <div class="paper-list" id="paperList"><!-- 由 app.js 依 window.M2Papers 生成試卷卡 --></div>
+      <p class="paper-empty" id="paperEmpty" data-i18n="paperEmpty" hidden>尚未載入試卷（私用版會載入教材期考卷）。</p>
+    </section>
+
+    <!-- ② 作答中（一次一題；題號導航列可跳題、可標記） -->
+    <section class="panel exam-panel" id="examPanel" hidden>
+      <div class="panel-head">
+        <h2 data-i18n="examSecTitle">作答中</h2>
+        <span class="exam-timer" id="examTimer">--:--</span>
+      </div>
+      <div class="exam-meta">
+        <span class="exam-paper-name" id="examPaperName">—</span>
+        <span class="exam-chip" id="examProgress">—</span>
+        <span class="exam-chip" id="examMarks">—</span>
+      </div>
+
+      <div class="exam-nav" id="examNav" role="group"><!-- 由 app.js 生成題號按鈕 --></div>
+      <div class="exam-legend">
+        <span class="leg leg-unanswered"><i></i><span id="lgUnanswered">未作答</span></span>
+        <span class="leg leg-answered"><i></i><span id="lgAnswered">已作答</span></span>
+        <span class="leg leg-marked"><i></i><span id="lgMarked">已標記</span></span>
+      </div>
+
+      <div class="qmeta">
+        <span class="lv-badge lv1" id="examQLevel" hidden>LV1</span>
+        <span class="sub-tag" id="examQSub"></span>
+      </div>
+      <div class="question" id="examQuestionText">載入中…</div>
+
+      <div class="answer-area">
+        <label for="examAnswerInput" class="small-label" id="examAnswerLabel" data-i18n="answerLabel">輸入你的答案（可接受 開方2、√2、2^(1/2)、3/4、0.75 等寫法）</label>
+        <div class="input-row" id="examAnswerRow">
+          <input id="examAnswerInput" type="text" autocomplete="off" spellcheck="false"
+                 data-i18n-ph="answerPlaceholder" placeholder="例：√57">
+          <button id="btnExamSubmitOne" class="primary-btn" type="button" data-i18n="btnPaperSubmitOne">提交此題</button>
+        </div>
+        <div class="hint-row">
+          <button id="btnExamHint" class="ghost-btn small" type="button" data-i18n="btnHint">💡 提示</button>
+          <div class="hint-box" id="examHintBox" hidden></div>
+        </div>
+
+        <!-- 溫習題（證明／論述題）：不設輸入框，改為「看解答」＋真人自評（滿分／0 分） -->
+        <div class="review-box" id="examReviewBox" hidden>
+          <p class="review-notice" id="examReviewNotice"></p>
+          <button id="btnExamReveal" class="primary-btn" type="button" data-i18n="btnReveal">看解答</button>
+          <div class="self-mark" id="examSelfRow">
+            <span class="self-prompt" id="examSelfPrompt"></span>
+            <button id="btnSelfFull" class="primary-btn" type="button" data-i18n="btnSelfFull">滿分</button>
+            <button id="btnSelfZero" class="ghost-btn" type="button" data-i18n="btnSelfZero">0 分</button>
+          </div>
+          <p class="self-recorded" id="examSelfRecorded" hidden></p>
+        </div>
+      </div>
+
+      <div class="feedback" id="examFeedback" hidden></div>
+
+      <div class="solution" id="examSolution" hidden>
+        <h3 data-i18n="solTitle">📘 答案與解題（DSE 評分標準）</h3>
+        <div class="std-answer"><span data-i18n="standardAnswer">標準答案：</span><span id="examStdAnswer"></span></div>
+        <div id="examSolutionBody"></div>
+      </div>
+
+      <div class="exam-foot">
+        <button id="btnPaperPrev" class="ghost-btn" type="button" data-i18n="btnPaperPrev">← 上一題</button>
+        <button id="btnPaperMark" class="ghost-btn" type="button" data-i18n="btnPaperMark">標記此題</button>
+        <button id="btnPaperNext" class="primary-btn" type="button" data-i18n="btnPaperNext">下一題 →</button>
+        <button id="btnPaperHandIn" class="danger-btn" type="button" data-i18n="btnPaperHandIn">📮 交卷</button>
+        <button id="btnExamToList" class="ghost-btn" type="button" data-i18n="paperSecTitle">選擇試卷</button>
+      </div>
+    </section>
+
+    <!-- ③ 交卷報告 -->
+    <section class="panel report-panel" id="reportPanel" hidden>
+      <div class="panel-head">
+        <h2 data-i18n="reportSecTitle">📊 模擬試卷報告</h2>
+        <span class="report-paper-name" id="reportPaperName">—</span>
+      </div>
+      <p class="report-note" id="reportNote" hidden></p>
+      <div class="report-summary" id="reportSummary"></div>
+      <p class="report-grade-note" id="reportGradeNote"></p>
+      <div class="report-table-wrap">
+        <table class="report-table">
+          <thead id="reportHead"></thead>
+          <tbody id="reportBody"></tbody>
+        </table>
+      </div>
+      <div class="solution" id="reportSolution" hidden>
+        <h3 data-i18n="solTitle">📘 答案與解題（DSE 評分標準）</h3>
+        <div class="std-answer"><span data-i18n="standardAnswer">標準答案：</span><span id="reportStdAnswer"></span></div>
+        <div id="reportSolutionBody"></div>
+      </div>
+      <div class="next-row">
+        <button id="btnPaperListBack" class="ghost-btn" type="button" data-i18n="paperSecTitle">選擇試卷</button>
+        <button id="btnRedoPaper" class="ghost-btn" type="button" data-i18n="btnRedoPaper">↺ 重做這份卷</button>
+        <button id="btnBackPractice" class="primary-btn" type="button" data-i18n="btnBackPractice">返回練習模式</button>
+      </div>
+    </section>
+  </div><!-- /#paperMode -->
+</main>
+
+<!-- ══ AI 出題設定（對話框）：必須放在所有載入程式的標籤之前，app.js 啟動時才抓得到這些元素。
+     API Key 只存在本機 localStorage，只會送到使用者自己填的端點 ══ -->
+<div class="ai-dialog" id="aiDialog" hidden>
+  <div class="ai-dialog-card" role="dialog" aria-modal="true" aria-labelledby="aiDialogTitle">
+    <h3 id="aiDialogTitle" data-i18n="aiDialogTitle">AI 出題設定</h3>
+
+    <label class="ai-field" for="aiProvider"><span data-i18n="aiProvider">AI 服務</span>
+      <select id="aiProvider"></select>
+    </label>
+    <label class="ai-field" for="aiBase"><span data-i18n="aiBase">API 端點</span>
+      <input id="aiBase" type="url" autocomplete="off" spellcheck="false" placeholder="https://api.deepseek.com/v1">
+    </label>
+    <label class="ai-field" for="aiModel"><span data-i18n="aiModel">模型名稱</span>
+      <input id="aiModel" type="text" autocomplete="off" spellcheck="false" placeholder="deepseek-chat">
+    </label>
+    <label class="ai-field" for="aiKey"><span data-i18n="aiKey">API Key</span>
+      <input id="aiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…">
+    </label>
+
+    <div class="ai-checks">
+      <label><input id="aiJson" type="checkbox"><span data-i18n="aiJsonMode">要求 JSON 模式（較穩定；部分服務不支援）</span></label>
+      <label><input id="aiAuto" type="checkbox"><span data-i18n="aiAutoPrefetch">背景預先出題（答題更順暢，會多用少量額度）</span></label>
+    </div>
+
+    <p class="ai-note" data-i18n="aiKeyNote">API Key 只存在你的瀏覽器（localStorage），並只會直接送到上面填寫的端點；本練習不會收集或上傳任何資料。</p>
+    <p class="ai-note" id="aiPoolNote"></p>
+
+    <div class="ai-dialog-actions">
+      <button id="btnAiClearPool" class="ghost-btn small" type="button" data-i18n="aiClearPool">清除已快取題目</button>
+      <span class="ai-spacer"></span>
+      <button id="btnAiClose" class="ghost-btn" type="button" data-i18n="aiClose">關閉</button>
+      <button id="btnAiSave" class="primary-btn" type="button" data-i18n="aiSave">儲存並啟用</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 題庫：每個主題一個檔案（依 tools/link-banks.js 生成，涵蓋該主題全部小主題）══ -->
+<!-- BANKS:START（由 tools/link-banks.js 自動產生，請勿手改） -->
+<script src="bank-extra/surds.js"></script>
+<script src="bank/induction.js"></script>
+<script src="bank-extra/induction.js"></script>
+<script src="bank/binomial.js"></script>
+<script src="bank-extra/binomial.js"></script>
+<script src="bank/sincos.js"></script>
+<script src="bank/trig.js"></script>
+<script src="bank-extra/trig.js"></script>
+<script src="bank/limits.js"></script>
+<script src="bank/diff.js"></script>
+<script src="bank-extra/diff.js"></script>
+<script src="bank/appdiff.js"></script>
+<script src="bank-extra/appdiff.js"></script>
+<script src="bank/indef.js"></script>
+<script src="bank-extra/indef.js"></script>
+<script src="bank/defint.js"></script>
+<script src="bank/matrix.js"></script>
+<script src="bank/linear.js"></script>
+<script src="bank/vector.js"></script>
+<script src="bank/vectorprod.js"></script>
+<script src="bank-extra/exam.js"></script>
+<!-- BANKS:END -->
+
+<!-- 私用題庫（教材原文題）——只在私用版載入 -->
+<script src="bank-local/ch1.js"></script>
+<script src="bank-local/ch2.js"></script>
+<script src="bank-local/ch3.js"></script>
+<script src="bank-local/ch4.js"></script>
+<script src="bank-local/ch7.js"></script>
+<script src="bank-local/ch9.js"></script>
+<script src="bank-local/exam.js"></script>
+<script src="questions.js"></script>
+<script src="grader.js"></script>
+<script src="i18n.js"></script>
+<!-- AI 出題模組（v6）：只在使用者按下開關並填好 API Key 後才會發送請求 -->
+<script src="ai.js"></script>
+<script src="app.js"></script>
+
+<!-- ══ 離線使用：註冊 Service Worker（PWA，可安裝到手機主畫面）══ -->
+<script>
+if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () { /* 離線功能失效不影響答題 */ });
+  });
+}
+</script>
+
+<!-- ══ 載入失敗提示：若少了任何檔案（最常見是上載時未包含 bank/ 子資料夾），
+     會直接在頁面底部顯示紅色錯誤訊息，而不是「介面空白」══ -->
+<script>
+(function () {
+  function banner(msg) {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#7f1d1d;' +
+      'color:#fff;padding:12px 16px;font:14px/1.7 system-ui,"Microsoft JhengHei",sans-serif;box-shadow:0 -4px 16px rgba(0,0,0,.4)';
+    d.textContent = msg;
+    document.body.appendChild(d);
+  }
+  window.addEventListener('error', function (e) {
+    var t = e.target;
+    if (t && t.tagName === 'SCRIPT' && t.src) {
+      banner('⚠ 載入失敗：' + t.src + '　→　請確認已把 index.html、app.js、grader.js、questions.js、i18n.js、styles.css 及整個 bank/ 子資料夾（13 個檔案）一併上載到同一個位置。');
+    }
+  }, true);
+  window.addEventListener('load', function () {
+    var grid = document.getElementById('topicGrid');
+    if (grid && grid.children.length === 0) {
+      banner('⚠ 介面未能啟動：題庫或程式未載入。請確認 index.html、app.js、grader.js、questions.js、i18n.js 及 bank/ 內 13 個檔案都在同一個資料夾；或改用單一檔案版 m2-app.html。');
+    }
+  });
+})();
+</script>
+</body>
+</html>

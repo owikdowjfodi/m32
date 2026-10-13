@@ -1,0 +1,28 @@
+{
+  "name": "M2 無限答題練習 · HKDSE 數學延伸單元二",
+  "short_name": "M2 練習",
+  "description": "HKDSE 數學延伸單元二（M2）13 個主題、390 題，中英雙語對照，題目分 LV1／LV2／LV3，連續答對 10 題即啟動無限訓練模式。",
+  "lang": "zh-Hant-HK",
+  "dir": "ltr",
+  "id": "m2-practice",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait",
+  "background_color": "#0a0e15",
+  "theme_color": "#0a0e15",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "開始練題",
+      "short_name": "練題",
+      "url": "./index.html"
+    }
+  ]
+}
